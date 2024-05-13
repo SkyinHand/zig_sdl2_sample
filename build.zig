@@ -1,11 +1,10 @@
 const std = @import("std");
 
-// Build总的来说是一个由依赖组成的有向无环图
-// 从主文件开始
+// Build is generally a directed acyclic graph composed of dependencies.
 pub fn build(b: *std.Build) void {
-    // 为了标准化，提供了两个函数：standardTargetOptions、standardOptimizeOption
-    // standardTargetOptions: 设置生成文件在运行时所在的操作系统，如windows，linux等
-    // standardOptimizeOption：设置生成文件的release或者debug类型
+    // For standardization, two functions are provided: `standardTargetOptions`, `standardOptimizeOption`
+    // `standardTargetOptions`: Set the operating system where the generated file is located at runtime, such as windows, linux, etc.
+    // `standardOptimizeOption`: Set the release or debug type of the generated file.
     const target = b.standardTargetOptions(.{});
 
     const optimize = b.standardOptimizeOption(.{});
@@ -18,57 +17,42 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.addIncludePath(.{ .cwd_relative = "D:/SDK/SDL2/include" });
-    // 把静态库和动态库加载到系统库下
+    // Load the static library and dynamic library into the system library.
     exe.addLibraryPath(.{ .cwd_relative = "D:/SDK/SDL2/lib" });
     exe.addLibraryPath(.{ .cwd_relative = "D:/SDK/SDL2/bin" });
 
-    // 链接里面的系统库文件
+    // Link the system library files inside.
     exe.linkSystemLibrary("SDL2");
     exe.linkSystemLibrary("SDL2_mixer");
-    // Add the folder where SDL2 is located to the environment variable.
+
+    // We need the contents of the C standard library, so we need to connect the C library.
     exe.linkLibC();
 
-    // 由于直接使用installBinFile无法设定绝对路径，所以改用addInstallBinFile方法，并且设置依赖，等到最后构建的时候，会向上查找所需依赖项并逐个构建
+    // Because the absolute path cannot be set by directly using installBinFile,
+    // the addInstallBinFile method is used instead, and the dependencies are set.
+    // When it is finally built, the required dependencies will be found up and built one by one.
     const sdl2_mv_step = b.addInstallBinFile(.{ .cwd_relative = "D:/SDK/SDL2/bin/SDL2.dll" }, "SDL2.dll");
     b.getInstallStep().dependOn(&sdl2_mv_step.step);
-    // const sdl2_image_step = b.addInstallBinFile(.{ .cwd_relative = "D:/SDK/SDL2/bin/SDL2_image.dll" }, "SDL2_image.dll");
-    // b.getInstallStep().dependOn(&sdl2_image_step.step);
     const sdl2_mixer_step = b.addInstallBinFile(.{ .cwd_relative = "D:/SDK/SDL2/bin/SDL2_mixer.dll" }, "SDL2_mixer.dll");
     b.getInstallStep().dependOn(&sdl2_mixer_step.step);
 
-    // This declares intent for the executable to be installed into the
-    // standard location when the user invokes the "install" step (the default
-    // step when running `zig build`).
     b.installArtifact(exe);
 
-    // This *creates* a Run step in the build graph, to be executed when another
-    // step is evaluated that depends on it. The next line below will establish
-    // such a dependency.
-
-    // 这个会在Build图中创建一个运行步骤，当其他步骤依赖此步骤的时候，这个步骤将会被执行
-    // 下面的一段代码将会建立上述的一个依赖
+    // This will create a run step in the Build diagram, which will be executed
+    // when other steps depend on this step.
+    // The following code will establish one of the above dependencies.
     const run_cmd = b.addRunArtifact(exe);
 
-    // By making the run step depend on the install step, it will be run from the
-    // installation directory rather than directly from within the cache directory.
-    // This is not necessary, however, if the application depends on other installed
-    // files, this ensures they will be present and in the expected location.
+    // The following are the original contents of the template.
     run_cmd.step.dependOn(b.getInstallStep());
 
-    // This allows the user to pass arguments to the application in the build
-    // command itself, like this: `zig build run -- arg1 arg2 etc`
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
 
-    // This creates a build step. It will be visible in the `zig build --help` menu,
-    // and can be selected like this: `zig build run`
-    // This will evaluate the `run` step rather than the default, which is "install".
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    // Creates a step for unit testing. This only builds the test executable
-    // but does not run it.
     const lib_unit_tests = b.addTest(.{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
@@ -85,9 +69,6 @@ pub fn build(b: *std.Build) void {
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
-    // Similar to creating the run step earlier, this exposes a `test` step to
-    // the `zig build --help` menu, providing a way for the user to request
-    // running the unit tests.
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_lib_unit_tests.step);
     test_step.dependOn(&run_exe_unit_tests.step);

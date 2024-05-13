@@ -12,6 +12,7 @@ const sdl_music = @cImport({
     @cInclude("SDL_mixer.h");
 });
 
+// play music
 pub fn main() !void {
     const WINDOW_W = 800;
     const WINDOW_H = 600;
