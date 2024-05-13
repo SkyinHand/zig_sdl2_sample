@@ -17,14 +17,24 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    exe.addIncludePath(.{ .cwd_relative = "D:/SDK/SDL2/include" });
+    // 把静态库和动态库加载到系统库下
+    exe.addLibraryPath(.{ .cwd_relative = "D:/SDK/SDL2/lib" });
+    exe.addLibraryPath(.{ .cwd_relative = "D:/SDK/SDL2/bin" });
+
+    // 链接里面的系统库文件
+    exe.linkSystemLibrary("SDL2");
+    exe.linkSystemLibrary("SDL2_mixer");
+    // Add the folder where SDL2 is located to the environment variable.
+    exe.linkLibC();
+
     // 由于直接使用installBinFile无法设定绝对路径，所以改用addInstallBinFile方法，并且设置依赖，等到最后构建的时候，会向上查找所需依赖项并逐个构建
     const sdl2_mv_step = b.addInstallBinFile(.{ .cwd_relative = "D:/SDK/SDL2/bin/SDL2.dll" }, "SDL2.dll");
     b.getInstallStep().dependOn(&sdl2_mv_step.step);
-    exe.addIncludePath(.{ .cwd_relative = "D:/SDK/SDL2/include" });
-    exe.addLibraryPath(.{ .cwd_relative = "D:/SDK/SDL2/lib" });
-    // Add the folder where SDL2 is located to the environment variable.
-    exe.linkSystemLibrary("SDL2");
-    exe.linkLibC();
+    // const sdl2_image_step = b.addInstallBinFile(.{ .cwd_relative = "D:/SDK/SDL2/bin/SDL2_image.dll" }, "SDL2_image.dll");
+    // b.getInstallStep().dependOn(&sdl2_image_step.step);
+    const sdl2_mixer_step = b.addInstallBinFile(.{ .cwd_relative = "D:/SDK/SDL2/bin/SDL2_mixer.dll" }, "SDL2_mixer.dll");
+    b.getInstallStep().dependOn(&sdl2_mixer_step.step);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
